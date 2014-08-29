@@ -4,7 +4,11 @@ import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.PrintWriter;
 import java.net.InetSocketAddress;
 import java.util.*;
@@ -16,6 +20,7 @@ public class FirstHtttpServer {
 
     static int port = 8080;
     static String ip = "localhost";
+    static String contentFolder = "public/";
 
     public static void main(String[] args) throws Exception {
         if (args.length == 2) {
@@ -23,11 +28,32 @@ public class FirstHtttpServer {
             ip = args[1];
         }
         HttpServer server = HttpServer.create(new InetSocketAddress(ip, port), 0);
-        server.createContext("/welcome", new RequestHandler());
-        server.createContext("/Headers", new RequestHandler());
+//        server.createContext("/welcome", new RequestHandler());
+//        server.createContext("/Headers", new RequestHandler());
+        server.createContext("/Pages", new RequestHandler1());
         server.setExecutor(null); // Use the default executor
         server.start();
         System.out.println("Server started, listening on port: " + port);
+    }
+
+    static class RequestHandler1 implements HttpHandler {
+
+        @Override
+        public void handle(HttpExchange he) throws IOException {
+            File file = new File(contentFolder + "Page1.html");
+            byte[] bytesToSend = new byte[(int) file.length()];
+            try {
+                BufferedInputStream bis = new BufferedInputStream(new FileInputStream(file));
+                bis.read(bytesToSend, 0, bytesToSend.length);
+            } catch (IOException ie) {
+                ie.printStackTrace();
+            }
+            he.sendResponseHeaders(200, bytesToSend.length);
+            try (OutputStream os = he.getResponseBody()) {
+                os.write(bytesToSend, 0, bytesToSend.length);
+            }
+        }
+
     }
 
     static class RequestHandler implements HttpHandler {
@@ -49,12 +75,11 @@ public class FirstHtttpServer {
             sb.append("<body>\n");
 
             sb.append("<table border = 1px>");
-            
+
             sb.append("<tr>");
             sb.append("<td> <h1>Headers</h1> </td>");
             sb.append("<td> <h1>Values</h1> </td>");
             sb.append("</tr>");
-            
 
             for (Object key : content.keySet()) {
                 String keyValue = key.toString();
